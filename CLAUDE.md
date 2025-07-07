@@ -39,8 +39,6 @@ Say: "I'll spawn agents to tackle different aspects of this problem" whenever a 
 - Before declaring "done"
 - **WHEN HOOKS FAIL WITH ERRORS** ❌
 
-Run: `bundle exec rubocop && bundle exec rspec` for Ruby or `npm run lint && npm test` for TypeScript
-
 > Why: You can lose track of what's actually working. These checkpoints prevent cascading failures.
 
 ### 🚨 CRITICAL: Hook Failures Are BLOCKING

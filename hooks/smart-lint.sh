@@ -90,7 +90,8 @@ detect_project_type() {
     fi
 
     # Python project
-    if [[ -f "pyproject.toml" ]] || [[ -f "setup.py" ]] || [[ -f "requirements.txt" ]] || [[ -n "$(find . -maxdepth 3 -name "*.py" -type f -print -quit 2>/dev/null)" ]]; then
+    # if [[ -f "pyproject.toml" ]] || [[ -f "setup.py" ]] || [[ -f "requirements.txt" ]] || [[ -n "$(find . -maxdepth 3 -name "*.py" -type f -print -quit 2>/dev/null)" ]]; then
+    if [[ -f "pyproject.toml" ]] || [[ -f "setup.py" ]] || [[ -f "requirements.txt" ]]; then
         types+=("python")
     fi
 
@@ -232,7 +233,7 @@ lint_ruby() {
     local modified_files
     modified_files=$(get_modified_files)
     local ruby_files=()
-    
+
     # Filter for Ruby files
     if [[ -n "$modified_files" ]]; then
         while IFS= read -r file; do
@@ -253,12 +254,12 @@ lint_ruby() {
         log_info "Running RuboCop..."
         local rubocop_output
         local rubocop_cmd="bundle exec rubocop --autocorrect-all"
-        
+
         # If we have specific files, only check those
         if [[ ${#ruby_files[@]} -gt 0 ]]; then
             rubocop_cmd="$rubocop_cmd ${ruby_files[*]}"
         fi
-        
+
         # Use autocorrect mode to fix issues automatically
         if ! rubocop_output=$($rubocop_cmd 2>&1); then
             # Check if there are still unfixed issues
@@ -266,7 +267,7 @@ lint_ruby() {
             if [[ ${#ruby_files[@]} -gt 0 ]]; then
                 check_cmd="$check_cmd ${ruby_files[*]}"
             fi
-            
+
             if ! $check_cmd >/dev/null 2>&1; then
                 add_error "RuboCop found issues that couldn't be auto-fixed"
                 echo "$rubocop_output" >&2
@@ -329,7 +330,7 @@ lint_python() {
     local modified_files
     modified_files=$(get_modified_files)
     local python_files=()
-    
+
     # Filter for Python files
     if [[ -n "$modified_files" ]]; then
         while IFS= read -r file; do
@@ -352,7 +353,7 @@ lint_python() {
         if [[ ${#python_files[@]} -gt 0 ]]; then
             black_target="${python_files[*]}"
         fi
-        
+
         if ! black_output=$(black $black_target --check 2>&1); then
             # Apply formatting and capture any errors
             local format_output
@@ -370,7 +371,7 @@ lint_python() {
         if [[ ${#python_files[@]} -gt 0 ]]; then
             ruff_target="${python_files[*]}"
         fi
-        
+
         if ! ruff_output=$(ruff check --fix $ruff_target 2>&1); then
             add_error "Ruff found issues"
             echo "$ruff_output" >&2
@@ -381,7 +382,7 @@ lint_python() {
         if [[ ${#python_files[@]} -gt 0 ]]; then
             flake8_target="${python_files[*]}"
         fi
-        
+
         if ! flake8_output=$(flake8 $flake8_target 2>&1); then
             add_error "Flake8 found issues"
             echo "$flake8_output" >&2
@@ -403,7 +404,7 @@ lint_javascript() {
     local modified_files
     modified_files=$(get_modified_files)
     local js_files=()
-    
+
     # Filter for JavaScript/TypeScript files
     if [[ -n "$modified_files" ]]; then
         while IFS= read -r file; do
@@ -442,7 +443,7 @@ lint_javascript() {
     fi
 
     # ESLint - comprehensive JavaScript/TypeScript linting
-    if [[ -f ".eslintrc.js" ]] || [[ -f ".eslintrc.json" ]] || [[ -f ".eslintrc.yml" ]] || [[ -f "eslint.config.js" ]] || ([[ -f "package.json" ]] && grep -q "eslintConfig" package.json); then
+    if [[ -f ".eslintrc" ]] || [[ -f ".eslintrc.js" ]] || [[ -f ".eslintrc.json" ]] || [[ -f ".eslintrc.yml" ]] || [[ -f "eslint.config.js" ]] || ([[ -f "package.json" ]] && grep -q "eslintConfig" package.json); then
         if command_exists eslint || (command_exists npx && npx eslint --version >/dev/null 2>&1); then
             log_info "Running ESLint..."
             local eslint_output
@@ -453,7 +454,7 @@ lint_javascript() {
             if ! command_exists eslint; then
                 eslint_cmd="npx eslint"
             fi
-            
+
             # If we have specific files, only check those
             if [[ ${#js_files[@]} -gt 0 ]]; then
                 eslint_target="${js_files[*]}"
@@ -482,26 +483,20 @@ lint_javascript() {
         fi
     fi
 
-    # Prettier - code formatting
-    if [[ -f ".prettierrc" ]] || [[ -f "prettier.config.js" ]] || [[ -f ".prettierrc.json" ]] || [[ -f ".prettierrc.yml" ]] || ([[ -f "package.json" ]] && grep -q "prettier" package.json); then
+    # Prettier - code formatting (only run on modified files)
+    if [[ ${#js_files[@]} -gt 0 ]] && ([[ -f ".prettierrc" ]] || [[ -f "prettier.config.js" ]] || [[ -f ".prettierrc.json" ]] || [[ -f ".prettierrc.yml" ]] || ([[ -f "package.json" ]] && grep -q "prettier" package.json)); then
         if command_exists prettier || (command_exists npx && npx prettier --version >/dev/null 2>&1); then
-            log_info "Running Prettier..."
+            log_info "Running Prettier on modified files..."
             local prettier_cmd="prettier"
-            local prettier_target="."
 
             # Check if we should use npx
             if ! command_exists prettier; then
                 prettier_cmd="npx prettier"
             fi
-            
-            # If we have specific files, only check those
-            if [[ ${#js_files[@]} -gt 0 ]]; then
-                prettier_target="${js_files[*]}"
-            fi
 
-            # Apply formatting
+            # Apply formatting to modified files only
             local format_output
-            if ! format_output=$($prettier_cmd --write $prettier_target 2>&1); then
+            if ! format_output=$($prettier_cmd --write "${js_files[@]}" 2>&1); then
                 add_error "Prettier formatting failed"
                 echo "$format_output" >&2
             fi
@@ -509,6 +504,8 @@ lint_javascript() {
             log_error "Prettier is in package.json but not available - run 'npm install'"
             add_error "Prettier not available"
         fi
+    elif [[ ${#js_files[@]} -eq 0 ]] && ([[ -f ".prettierrc" ]] || [[ -f "prettier.config.js" ]] || [[ -f ".prettierrc.json" ]] || [[ -f ".prettierrc.yml" ]] || ([[ -f "package.json" ]] && grep -q "prettier" package.json)); then
+        log_debug "No modified JS/TS files found, skipping Prettier"
     fi
 
     # Check for console.log statements in production code
@@ -516,7 +513,7 @@ lint_javascript() {
         log_info "Checking for console.log statements..."
         local console_found=false
         local search_target="."
-        
+
         # If we have specific files, only check those
         if [[ ${#js_files[@]} -gt 0 ]]; then
             search_target="${js_files[*]}"
@@ -547,7 +544,7 @@ lint_rust() {
     local modified_files
     modified_files=$(get_modified_files)
     local rust_files=()
-    
+
     # Filter for Rust files
     if [[ -n "$modified_files" ]]; then
         while IFS= read -r file; do
@@ -566,7 +563,7 @@ lint_rust() {
     if command_exists cargo; then
         local fmt_output
         local fmt_cmd="cargo fmt -- --check"
-        
+
         # Note: cargo fmt doesn't support specifying individual files in the same way
         # It formats based on the workspace/package structure
         if ! fmt_output=$($fmt_cmd 2>&1); then

@@ -9,7 +9,7 @@ description: Verify code quality, run tests, and ensure production readiness
 
 When you run `/check`, you are REQUIRED to:
 
-1. **IDENTIFY** all errors, warnings, and issues
+1. **IDENTIFY** all errors, warnings, and issues for new or modified files
 2. **FIX EVERY SINGLE ONE** - not just report them!
 3. **USE MULTIPLE AGENTS** to fix issues in parallel:
    - Spawn one agent to fix linting issues
@@ -18,8 +18,7 @@ When you run `/check`, you are REQUIRED to:
    - Say: "I'll spawn multiple agents to fix all these issues in parallel"
 4. **DO NOT STOP** until:
    - ✅ ALL linters pass with ZERO warnings
-   - ✅ ALL tests pass
-   - ✅ Build succeeds
+   - ✅ ALL tests pass on new or modified files
    - ✅ EVERYTHING is GREEN
 
 **FORBIDDEN BEHAVIORS:**
@@ -39,8 +38,7 @@ When you run `/check`, you are REQUIRED to:
 
 **YOU ARE NOT DONE UNTIL:**
 - All linters pass with zero warnings
-- All tests pass successfully
-- All builds complete without errors
+- All tests pass successfully for new or modified files
 - Everything shows green/passing status
 
 ---

@@ -148,7 +148,7 @@ Add `// claude-hooks-disable` to the top of any file to skip hooks.
 ## Dependencies
 
 Hooks work best with these tools installed:
-- **Ruby/Rails**: `rubocop`, `erb_lint`, `rails_best_practices`, `bundle-audit`, `rspec`
+- **Ruby/Rails**: `rubocop`, `erb_lint`, `rails_best_practices`, `rspec`
 - **Python**: `black`, `ruff`, `pytest`
 - **JavaScript/TypeScript**: `typescript`, `eslint`, `prettier`
 - **Rust**: `cargo fmt`, `cargo clippy`
