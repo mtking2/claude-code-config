@@ -35,6 +35,7 @@ exclude_patterns=(
     "thumbs.db"
     "desktop.ini"
     "symlink-all.sh"
+    "README.md"
 )
 
 # Create target directory if it doesn't exist
