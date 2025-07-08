@@ -453,21 +453,21 @@ lint_javascript() {
             if [[ -f "yarn.lock" ]] && command_exists yarn; then
                 eslint_cmd="yarn lint"
             elif ! command_exists npm && (command_exists npx && npx eslint --version >/dev/null 2>&1); then
-                eslint_cmd="npx eslint"
+                eslint_cmd="npx eslint $eslint_target"
             elif command_exists eslint; then
-                eslint_cmd="eslint"
+                eslint_cmd="eslint $eslint_target"
             fi
 
             # If we have specific files, only check those
-            if [[ ${#js_files[@]} -gt 0 ]]; then
-                eslint_target="${js_files[*]}"
-            fi
+            # if [[ ${#js_files[@]} -gt 0 ]]; then
+            #     eslint_target="${js_files[*]}"
+            # fi
 
             log_info "Running ESLint (via $eslint_cmd)..."
 
-            if ! eslint_output=$($eslint_cmd $eslint_target --fix 2>&1); then
+            if ! eslint_output=$($eslint_cmd --fix 2>&1); then
                 # Check if there are still unfixed issues
-                if ! $eslint_cmd $eslint_target >/dev/null 2>&1; then
+                if ! $eslint_cmd >/dev/null 2>&1; then
                     add_error "ESLint found issues that couldn't be auto-fixed"
                     echo "$eslint_output" >&2
                 fi
@@ -513,11 +513,11 @@ lint_javascript() {
             local default_exclusions="(test\.|spec\.|\.test\.|\.spec\.|__tests__|__mocks__|node_modules|\.config\.|dist/|build/|vendor/|tmp/|temp/|coverage/|\.min\.js)"
             local custom_exclusions="${CLAUDE_HOOKS_JS_CONSOLE_EXCLUDE:-}"
             local exclude_pattern="$default_exclusions"
-            
+
             if [[ -n "$custom_exclusions" ]]; then
                 exclude_pattern="${default_exclusions}|${custom_exclusions}"
             fi
-            
+
             # Exclude test files, config files, and node_modules
             local console_output
             console_output=$(grep -H "console\.\(log\|debug\|info\|warn\|error\)" $search_target 2>/dev/null | \
@@ -525,7 +525,7 @@ lint_javascript() {
                grep -v "// *eslint-disable.*console" | \
                grep -v "/\* *eslint-disable.*console" | \
                head -20)
-            
+
             if [[ -n "$console_output" ]]; then
                 console_found=true
                 add_error "Found console statements in production code"
