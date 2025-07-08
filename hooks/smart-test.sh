@@ -186,7 +186,7 @@ run_ruby_tests() {
     fi
 
     # Check if we should require tests
-    local require_tests=true
+    local require_tests="${CLAUDE_HOOKS_FAIL_ON_MISSING_TESTS:-false}"
     # Ruby files that typically don't need tests
     if [[ "$base" =~ ^(Gemfile|Rakefile|config\.ru|version)$ ]]; then
         require_tests=false
@@ -371,7 +371,7 @@ run_python_tests() {
     fi
 
     # Check if we should require tests
-    local require_tests=true
+    local require_tests="${CLAUDE_HOOKS_FAIL_ON_MISSING_TESTS:-false}"
     # Python files that typically don't need tests
     if [[ "$base" =~ ^(__init__|__main__|setup|setup.py|conf|config|settings)$ ]]; then
         require_tests=false
@@ -502,7 +502,7 @@ run_javascript_tests() {
     fi
 
     # Check if we should require tests
-    local require_tests=true
+    local require_tests="${CLAUDE_HOOKS_FAIL_ON_MISSING_TESTS:-false}"
     # JS/TS files that typically don't need tests
     if [[ "$base" =~ ^(index|main|app|config|setup|webpack\.config|rollup\.config|vite\.config)$ ]]; then
         require_tests=false
