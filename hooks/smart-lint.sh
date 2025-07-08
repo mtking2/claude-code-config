@@ -505,15 +505,32 @@ lint_javascript() {
         log_info "Checking for console.log statements..."
         local console_found=false
         local search_target="${js_files[*]}"
-        log_info "in files: ${search_target}"
+        log_debug "Console check - Modified JS files: ${search_target}"
 
-        # Exclude test files, config files, and node_modules
-        if grep -r --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx" "console\.\(log\|debug\|info\|warn\|error\)" $search_target | \
-           grep -v -E "(test\.|spec\.|\.test\.|\.spec\.|__tests__|node_modules|\.config\.|dist/|build/)" | \
-           grep -v "// *eslint-disable.*console" | \
-           head -20; then
-            console_found=true
-            add_error "Found console statements in production code"
+        # Only check if we have files to check
+        if [[ -n "$search_target" ]]; then
+            # Build exclusion pattern
+            local default_exclusions="(test\.|spec\.|\.test\.|\.spec\.|__tests__|__mocks__|node_modules|\.config\.|dist/|build/|vendor/|tmp/|temp/|coverage/|\.min\.js)"
+            local custom_exclusions="${CLAUDE_HOOKS_JS_CONSOLE_EXCLUDE:-}"
+            local exclude_pattern="$default_exclusions"
+            
+            if [[ -n "$custom_exclusions" ]]; then
+                exclude_pattern="${default_exclusions}|${custom_exclusions}"
+            fi
+            
+            # Exclude test files, config files, and node_modules
+            local console_output
+            console_output=$(grep -H "console\.\(log\|debug\|info\|warn\|error\)" $search_target 2>/dev/null | \
+               grep -v -E "$exclude_pattern" | \
+               grep -v "// *eslint-disable.*console" | \
+               grep -v "/\* *eslint-disable.*console" | \
+               head -20)
+            
+            if [[ -n "$console_output" ]]; then
+                console_found=true
+                add_error "Found console statements in production code"
+                echo "$console_output" >&2
+            fi
         fi
     fi
 
