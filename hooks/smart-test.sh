@@ -43,10 +43,10 @@ load_config() {
     export CLAUDE_HOOKS_ENABLE_RACE="${CLAUDE_HOOKS_ENABLE_RACE:-true}"
     export CLAUDE_HOOKS_FAIL_ON_MISSING_TESTS="${CLAUDE_HOOKS_FAIL_ON_MISSING_TESTS:-false}"
     export CLAUDE_HOOKS_TEST_VERBOSE="${CLAUDE_HOOKS_TEST_VERBOSE:-false}"
-    
+
     # Load project config
     load_project_config
-    
+
     # Quick exit if disabled
     if [[ "$CLAUDE_HOOKS_TEST_ON_EDIT" != "true" ]]; then
         echo "DEBUG: Test on edit disabled, exiting" >&2
@@ -65,18 +65,18 @@ if [ -t 0 ]; then
 else
     # Read JSON input from stdin
     INPUT=$(cat)
-    
+
     # Check if input is valid JSON
     if echo "$INPUT" | jq . >/dev/null 2>&1; then
         # Extract relevant fields
         TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
         TOOL_INPUT=$(echo "$INPUT" | jq -r '.tool_input // empty')
-        
+
         # Only process edit-related tools
         if [[ ! "$TOOL_NAME" =~ ^(Edit|Write|MultiEdit)$ ]]; then
             exit 0
         fi
-        
+
         # Extract file path(s)
         if [[ "$TOOL_NAME" == "MultiEdit" ]]; then
             # MultiEdit has a different structure
@@ -84,7 +84,7 @@ else
         else
             FILE_PATH=$(echo "$TOOL_INPUT" | jq -r '.file_path // empty')
         fi
-        
+
         # Skip if no file path
         [[ -z "$FILE_PATH" ]] && exit 0
     else
@@ -105,36 +105,29 @@ should_skip_test_requirement() {
     local file="$1"
     local base=$(basename "$file")
     local dir=$(dirname "$file")
-    
+
     # Files that typically don't have tests
     local skip_patterns=(
-        "main.go"           # Entry points
-        "doc.go"            # Package documentation
-        "*_generated.go"    # Generated code
-        "*_string.go"       # Stringer generated
-        "*.pb.go"           # Protocol buffer generated
-        "*.pb.gw.go"        # gRPC gateway generated
-        "bindata.go"        # Embedded assets
-        "migrations/*.go"   # Database migrations
+        "*.js"
     )
-    
+
     # Check patterns
     for pattern in "${skip_patterns[@]}"; do
         if [[ "$base" == $pattern ]]; then
             return 0
         fi
     done
-    
+
     # Skip if in specific directories
     if [[ "$dir" =~ /(vendor|testdata|examples|cmd/[^/]+|gen|generated|.gen)(/|$) ]]; then
         return 0
     fi
-    
+
     # Skip if it's a test file itself (will be handled differently)
     if [[ "$file" =~ _test\.(go|py|js|ts)$ ]]; then
         return 0
     fi
-    
+
     return 1
 }
 
@@ -145,13 +138,13 @@ should_skip_test_requirement() {
 format_test_output() {
     local output="$1"
     local test_type="$2"
-    
+
     # If output is empty, say so
     if [[ -z "$output" ]]; then
         echo "(no output captured)"
         return
     fi
-    
+
     # Show the full output - no truncation when tests fail
     echo "$output"
 }
@@ -164,12 +157,12 @@ run_ruby_tests() {
     local file="$1"
     local dir=$(dirname "$file")
     local base=$(basename "$file" .rb)
-    
+
     # If this IS a test file/spec, run it directly
     if [[ "$file" =~ (_spec|_test)\.rb$ ]]; then
         echo -e "${BLUE}🧪 Running test/spec file directly: $file${NC}" >&2
         local test_output
-        
+
         # Determine test framework
         if [[ "$file" =~ _spec\.rb$ ]] && command -v rspec >/dev/null 2>&1; then
             # RSpec test
@@ -191,7 +184,7 @@ run_ruby_tests() {
         echo -e "${GREEN}✅ Tests passed in $file${NC}" >&2
         return 0
     fi
-    
+
     # Check if we should require tests
     local require_tests=true
     # Ruby files that typically don't need tests
@@ -201,21 +194,21 @@ run_ruby_tests() {
     if [[ "$dir" =~ /(db/migrate|db/schema|config|script|vendor)(/|$) ]]; then
         require_tests=false
     fi
-    
+
     # Parse test modes
     IFS=',' read -ra TEST_MODES <<< "$CLAUDE_HOOKS_TEST_MODES"
-    
+
     local failed=0
     local tests_run=0
-    
+
     for mode in "${TEST_MODES[@]}"; do
         mode=$(echo "$mode" | xargs)  # Trim whitespace
-        
+
         case "$mode" in
             "focused")
                 # Look for corresponding test/spec file
                 local test_files=()
-                
+
                 # RSpec specs
                 if [[ -f "spec/${base}_spec.rb" ]]; then
                     test_files+=("spec/${base}_spec.rb")
@@ -224,7 +217,7 @@ run_ruby_tests() {
                 elif [[ -f "${dir}/../spec/${base}_spec.rb" ]]; then
                     test_files+=("${dir}/../spec/${base}_spec.rb")
                 fi
-                
+
                 # Minitest/Test::Unit tests
                 if [[ -f "test/${base}_test.rb" ]]; then
                     test_files+=("test/${base}_test.rb")
@@ -233,12 +226,12 @@ run_ruby_tests() {
                 elif [[ -f "${dir}/../test/${base}_test.rb" ]]; then
                     test_files+=("${dir}/../test/${base}_test.rb")
                 fi
-                
+
                 if [[ ${#test_files[@]} -gt 0 ]]; then
                     for test_file in "${test_files[@]}"; do
                         echo -e "${BLUE}🧪 Running focused tests for $base...${NC}" >&2
                         tests_run=$((tests_run + 1))
-                        
+
                         local test_output
                         if [[ "$test_file" =~ _spec\.rb$ ]] && command -v rspec >/dev/null 2>&1; then
                             if ! test_output=$(bundle exec rspec "$test_file" 2>&1); then
@@ -265,12 +258,12 @@ run_ruby_tests() {
                     return 2
                 fi
                 ;;
-            
+
             "package")
                 # Run all tests in the current directory/module
                 echo -e "${BLUE}📦 Running package tests...${NC}" >&2
                 tests_run=$((tests_run + 1))
-                
+
                 local test_output
                 # Try RSpec first
                 if command -v rspec >/dev/null 2>&1 && [[ -d "spec" ]]; then
@@ -301,12 +294,12 @@ run_ruby_tests() {
                     fi
                 fi
                 ;;
-            
+
             "all")
                 # Run all project tests
                 echo -e "${BLUE}🌍 Running all project tests...${NC}" >&2
                 tests_run=$((tests_run + 1))
-                
+
                 local test_output
                 # Try RSpec
                 if command -v rspec >/dev/null 2>&1 && [[ -d "spec" ]]; then
@@ -330,7 +323,7 @@ run_ruby_tests() {
                 ;;
         esac
     done
-    
+
     # Summary
     if [[ $tests_run -eq 0 ]]; then
         if [[ "$require_tests" == "true" ]]; then
@@ -343,7 +336,7 @@ run_ruby_tests() {
     elif [[ $failed -eq 0 ]]; then
         log_success "All tests passed for $file"
     fi
-    
+
     return $failed
 }
 
@@ -351,7 +344,7 @@ run_python_tests() {
     local file="$1"
     local dir=$(dirname "$file")
     local base=$(basename "$file" .py)
-    
+
     # If this IS a test file, run it directly
     if [[ "$file" =~ (test_.*|.*_test)\.py$ ]]; then
         echo -e "${BLUE}🧪 Running test file directly: $file${NC}" >&2
@@ -376,7 +369,7 @@ run_python_tests() {
         echo -e "${GREEN}✅ Tests passed in $file${NC}" >&2
         return 0
     fi
-    
+
     # Check if we should require tests
     local require_tests=true
     # Python files that typically don't need tests
@@ -386,7 +379,7 @@ run_python_tests() {
     if [[ "$dir" =~ /(migrations|scripts|docs|examples)(/|$) ]]; then
         require_tests=false
     fi
-    
+
     # Find test file
     local test_file=""
     local test_candidates=(
@@ -395,29 +388,29 @@ run_python_tests() {
         "${dir}/tests/test_${base}.py"
         "${dir}/../tests/test_${base}.py"
     )
-    
+
     for candidate in "${test_candidates[@]}"; do
         if [[ -f "$candidate" ]]; then
             test_file="$candidate"
             break
         fi
     done
-    
+
     local failed=0
     local tests_run=0
-    
+
     # Parse test modes
     IFS=',' read -ra TEST_MODES <<< "$CLAUDE_HOOKS_TEST_MODES"
-    
+
     for mode in "${TEST_MODES[@]}"; do
         mode=$(echo "$mode" | xargs)
-        
+
         case "$mode" in
             "focused")
                 if [[ -n "$test_file" ]]; then
                     echo -e "${BLUE}🧪 Running focused tests for $base...${NC}" >&2
                     tests_run=$((tests_run + 1))
-                    
+
                     local test_output
                     if command -v pytest >/dev/null 2>&1; then
                         if ! test_output=$(
@@ -445,11 +438,11 @@ run_python_tests() {
                     return 2
                 fi
                 ;;
-                
+
             "package")
                 echo -e "${BLUE}📦 Running package tests in $dir...${NC}" >&2
                 tests_run=$((tests_run + 1))
-                
+
                 if command -v pytest >/dev/null 2>&1; then
                     local test_output
                     if ! test_output=$(
@@ -464,7 +457,7 @@ run_python_tests() {
                 ;;
         esac
     done
-    
+
     # Summary
     if [[ $tests_run -eq 0 && "$require_tests" == "true" && -z "$test_file" ]]; then
         echo -e "${RED}❌ No tests found for $file (tests required)${NC}" >&2
@@ -473,7 +466,7 @@ run_python_tests() {
     elif [[ $failed -eq 0 && $tests_run -gt 0 ]]; then
         log_success "All tests passed for $file"
     fi
-    
+
     return $failed
 }
 
@@ -481,11 +474,11 @@ run_javascript_tests() {
     local file="$1"
     local dir=$(dirname "$file")
     local base=$(basename "$file" | sed 's/\.[tj]sx\?$//' | sed 's/\.(test|spec)$//')
-    
+
     # If this IS a test file, run it directly
     if [[ "$file" =~ \.(test|spec)\.[tj]sx?$ ]]; then
         echo -e "${BLUE}🧪 Running test file directly: $file${NC}" >&2
-        
+
         local test_output
         if [[ -f "package.json" ]] && jq -e '.scripts.test' package.json >/dev/null 2>&1; then
             if ! test_output=$(
@@ -507,7 +500,7 @@ run_javascript_tests() {
         echo -e "${GREEN}✅ Tests passed in $file${NC}" >&2
         return 0
     fi
-    
+
     # Check if we should require tests
     local require_tests=true
     # JS/TS files that typically don't need tests
@@ -521,7 +514,7 @@ run_javascript_tests() {
     if [[ "$file" =~ \.d\.ts$ ]]; then
         require_tests=false
     fi
-    
+
     # Find test file
     local test_file=""
     local test_candidates=(
@@ -535,31 +528,31 @@ run_javascript_tests() {
         "${dir}/__tests__/${base}.spec.js"
         "${dir}/__tests__/${base}.test.ts"
     )
-    
+
     for candidate in "${test_candidates[@]}"; do
         if [[ -f "$candidate" ]]; then
             test_file="$candidate"
             break
         fi
     done
-    
+
     local failed=0
     local tests_run=0
-    
+
     # Check if package.json has test script
     if [[ -f "package.json" ]] && jq -e '.scripts.test' package.json >/dev/null 2>&1; then
         # Parse test modes
         IFS=',' read -ra TEST_MODES <<< "$CLAUDE_HOOKS_TEST_MODES"
-        
+
         for mode in "${TEST_MODES[@]}"; do
             mode=$(echo "$mode" | xargs)
-            
+
             case "$mode" in
                 "focused")
                     if [[ -n "$test_file" ]]; then
                         echo -e "${BLUE}🧪 Running focused tests for $base...${NC}" >&2
                         tests_run=$((tests_run + 1))
-                        
+
                         local test_output
                         if ! test_output=$(
                             npm test -- "$test_file" 2>&1); then
@@ -576,11 +569,11 @@ run_javascript_tests() {
                         return 2
                     fi
                     ;;
-                    
+
                 "package")
                     echo -e "${BLUE}📦 Running all tests...${NC}" >&2
                     tests_run=$((tests_run + 1))
-                    
+
                     local test_output
                     if ! test_output=$(
                         npm test 2>&1); then
@@ -598,7 +591,7 @@ run_javascript_tests() {
         add_error "No test runner configured and no tests found"
         return 2
     fi
-    
+
     # Summary
     if [[ $tests_run -eq 0 && "$require_tests" == "true" && -z "$test_file" ]]; then
         echo -e "${RED}❌ No tests found for $file (tests required)${NC}" >&2
@@ -607,7 +600,7 @@ run_javascript_tests() {
     elif [[ $failed -eq 0 && $tests_run -gt 0 ]]; then
         log_success "All tests passed for $file"
     fi
-    
+
     return $failed
 }
 
@@ -619,9 +612,9 @@ run_javascript_tests() {
 main() {
     # Print header
     print_test_header
-    
+
     local failed=0
-    
+
     # Language-specific test runners
     if [[ "$FILE_PATH" =~ \.rb$ ]]; then
         run_ruby_tests "$FILE_PATH" || failed=1
@@ -633,7 +626,7 @@ main() {
         # No tests for this file type
         exit 0
     fi
-    
+
     if [[ $failed -ne 0 ]]; then
         exit_with_test_failure "$FILE_PATH"
     else
