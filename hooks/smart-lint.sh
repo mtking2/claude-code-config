@@ -444,15 +444,18 @@ lint_javascript() {
 
     # ESLint - comprehensive JavaScript/TypeScript linting
     if [[ -f ".eslintrc" ]] || [[ -f ".eslintrc.js" ]] || [[ -f ".eslintrc.json" ]] || [[ -f ".eslintrc.yml" ]] || [[ -f "eslint.config.js" ]] || ([[ -f "package.json" ]] && grep -q "eslintConfig" package.json); then
-        if command_exists eslint || (command_exists npx && npx eslint --version >/dev/null 2>&1); then
-            log_info "Running ESLint..."
+        if [[ -f "package.json" ]] && grep -q "eslint" package.json; then
             local eslint_output
-            local eslint_cmd="eslint"
-            local eslint_target=". --ext .js,.jsx,.ts,.tsx,.mjs,.cjs"
+            local eslint_cmd="npm run lint --if-present"
+            # local eslint_target=". --ext .js,.jsx,.ts,.tsx,.mjs,.cjs"
+            local eslint_target="app/javascript test/javascript --ext .js,.jsx,.ts,.tsx,.mjs,.cjs"
 
-            # Check if we should use npx
-            if ! command_exists eslint; then
+            if [[ -f "yarn.lock" ]] && command_exists yarn; then
+                eslint_cmd="yarn lint"
+            elif ! command_exists npm && (command_exists npx && npx eslint --version >/dev/null 2>&1); then
                 eslint_cmd="npx eslint"
+            elif command_exists eslint; then
+                eslint_cmd="eslint"
             fi
 
             # If we have specific files, only check those
@@ -460,25 +463,14 @@ lint_javascript() {
                 eslint_target="${js_files[*]}"
             fi
 
-            # Try to fix automatically first
+            log_info "Running ESLint (via $eslint_cmd)..."
+
             if ! eslint_output=$($eslint_cmd $eslint_target --fix 2>&1); then
                 # Check if there are still unfixed issues
                 if ! $eslint_cmd $eslint_target >/dev/null 2>&1; then
                     add_error "ESLint found issues that couldn't be auto-fixed"
                     echo "$eslint_output" >&2
                 fi
-            fi
-        elif [[ -f "package.json" ]] && grep -q "eslint" package.json; then
-            # Try npm run lint as fallback
-            if npm run lint --if-present >/dev/null 2>&1; then
-                local lint_output
-                if ! lint_output=$(npm run lint 2>&1); then
-                    add_error "ESLint found issues (via npm run lint)"
-                    echo "$lint_output" >&2
-                fi
-            else
-                log_error "ESLint is in package.json but not available - run 'npm install'"
-                add_error "ESLint not available"
             fi
         fi
     fi
@@ -509,15 +501,11 @@ lint_javascript() {
     fi
 
     # Check for console.log statements in production code
-    if [[ "${CLAUDE_HOOKS_JS_NO_CONSOLE:-true}" == "true" ]]; then
+    if [[ "${CLAUDE_HOOKS_JS_NO_CONSOLE:-true}" == "true" ]] && [[ ${#js_files[@]} -gt 0 ]]; then
         log_info "Checking for console.log statements..."
         local console_found=false
-        local search_target="."
-
-        # If we have specific files, only check those
-        if [[ ${#js_files[@]} -gt 0 ]]; then
-            search_target="${js_files[*]}"
-        fi
+        local search_target="${js_files[*]}"
+        log_info "in files: ${search_target}"
 
         # Exclude test files, config files, and node_modules
         if grep -r --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx" "console\.\(log\|debug\|info\|warn\|error\)" $search_target | \

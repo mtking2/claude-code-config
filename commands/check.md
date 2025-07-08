@@ -9,17 +9,22 @@ description: Verify code quality, run tests, and ensure production readiness
 
 When you run `/check`, you are REQUIRED to:
 
-1. **IDENTIFY** all errors, warnings, and issues for new or modified files
-2. **FIX EVERY SINGLE ONE** - not just report them!
-3. **USE MULTIPLE AGENTS** to fix issues in parallel:
+1. **USE** the diff between the current branch and master and **Target** files in the diff or unstaged new or modified files
+2. **IDENTIFY** all errors, warnings, and issues for the target files
+3. **FIX EVERY SINGLE ONE** - not just report them!
+4. **USE MULTIPLE AGENTS** to fix issues in parallel:
    - Spawn one agent to fix linting issues
    - Spawn another to fix test failures
    - Spawn more agents for different files/modules
    - Say: "I'll spawn multiple agents to fix all these issues in parallel"
-4. **DO NOT STOP** until:
+5. **DO NOT STOP** until:
    - ✅ ALL linters pass with ZERO warnings
-   - ✅ ALL tests pass on new or modified files
+   - ✅ ALL relevant tests pass on new or modified files
    - ✅ EVERYTHING is GREEN
+
+**REMINEDER**
+- Only target relevant files when using specific tools
+- i.e. Do not run rubocop on JS files, eslint on Ruby files, etc.
 
 **FORBIDDEN BEHAVIORS:**
 - ❌ "Here are the issues I found" → NO! FIX THEM!
@@ -38,7 +43,7 @@ When you run `/check`, you are REQUIRED to:
 
 **YOU ARE NOT DONE UNTIL:**
 - All linters pass with zero warnings
-- All tests pass successfully for new or modified files
+- All relevant tests pass successfully for new or modified files
 - Everything shows green/passing status
 
 ---
@@ -59,8 +64,6 @@ Execute comprehensive quality checks with ZERO tolerance for excuses.
 
 Let me ultrathink about validating this codebase against our exceptional standards.
 
-🚨 **REMEMBER: Hooks will verify EVERYTHING and block on violations!** 🚨
-
 **Universal Quality Verification Protocol:**
 
 **Step 0: Hook Status Check**
@@ -75,7 +78,6 @@ Let me ultrathink about validating this codebase against our exceptional standar
 
 **Step 2: Language-Agnostic Linting**
 Run appropriate linters for ALL languages in the project:
-- `make lint` if Makefile exists
 - `~/.claude/hooks/smart-lint.sh` for automatic detection
 - Manual linter runs if needed
 
@@ -95,7 +97,7 @@ Run appropriate linters for ALL languages in the project:
 - Consistent naming following Go conventions
 
 **Step 3: Test Verification**
-Run `make test` and ensure:
+Ensure:
 - ALL tests pass without flakiness
 - Test coverage is meaningful (not just high numbers)
 - Table-driven tests for complex logic
@@ -104,7 +106,7 @@ Run `make test` and ensure:
 - Tests actually test behavior, not implementation details
 
 **Go Quality Checklist:**
-- [ ] No interface{} or any{} - concrete types everywhere
+- [ ] No any - concrete types everywhere
 - [ ] Simple error handling - no custom error hierarchies
 - [ ] Early returns to reduce nesting
 - [ ] Meaningful variable names (userID not id)
@@ -112,22 +114,19 @@ Run `make test` and ensure:
 - [ ] No goroutine leaks
 - [ ] Deferred cleanup where appropriate
 - [ ] No race conditions (run with -race flag)
-- [ ] No time.Sleep() for synchronization - channels used instead
 - [ ] Select with timeouts instead of polling loops
 
 **Code Hygiene Verification:**
-- [ ] All exported symbols have godoc comments
 - [ ] No commented-out code blocks
 - [ ] No debugging print statements
 - [ ] No placeholder implementations
-- [ ] Consistent formatting (gofmt/goimports)
+- [ ] Consistent formatting (rubocop)
 - [ ] Dependencies are actually used
 - [ ] No circular dependencies
 
 **Security Audit:**
 - [ ] Input validation on all external data
 - [ ] SQL queries use prepared statements
-- [ ] Crypto operations use crypto/rand
 - [ ] No hardcoded secrets or credentials
 - [ ] Proper permission checks
 - [ ] Rate limiting where appropriate
@@ -139,7 +138,6 @@ Run `make test` and ensure:
 - [ ] Connection pooling configured
 - [ ] No unnecessary allocations in hot paths
 - [ ] No busy-wait loops consuming CPU
-- [ ] Channels used for efficient goroutine coordination
 
 **Failure Response Protocol:**
 When issues are found:
@@ -164,9 +162,8 @@ When issues are found:
 
 **Final Verification:**
 The code is ready when:
-✓ make lint: PASSES with zero warnings
-✓ make test: PASSES all tests
-✓ go test -race: NO race conditions
+✓ linters PASS with zero warnings
+✓ tests PASS for all relevant tests
 ✓ All checklist items verified
 ✓ Feature works end-to-end in realistic scenarios
 ✓ Error paths tested and handle gracefully
