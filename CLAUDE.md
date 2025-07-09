@@ -82,7 +82,7 @@ Your code must be 100% clean. No exceptions.
 ```
 
 ## Jira Ticket Context
-- If a a Jira ticket (XXX-123) is mentioned, especially if it starts with TPD, fetch the details from Jira/Atlassian MCPs (if available) for context
+- If a Jira ticket (XXX-123) is mentioned, especially if it starts with TPD, fetch the details from Jira/Atlassian MCPs (if available) for context
 
 ## GitHub Interaction
 - If asked to interact with GitHub in any way, prefer using the GitHub CLI (`gh` command) over any MCPs
