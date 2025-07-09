@@ -81,6 +81,9 @@ Your code must be 100% clean. No exceptions.
 - [ ] What comes next
 ```
 
+## Jira Ticket Context
+- If I mention a Jira ticket (XXX-123), especially if it starts with TPD, I probably want you to fetch the details from the mcp-atlassian for context
+
 ## Ruby/Rails-Specific Rules
 
 ### FORBIDDEN - NEVER DO THESE:
