@@ -3,17 +3,18 @@ allowed-tools: Bash(git diff:*), Bash(git log:*), Bash(git merge-base:*), Bash(g
 description: Generate a summary of committed changes on current branch compared to base branch
 ---
 
-Please generate a concise summary of all committed changes on the current branch compared to the base branch (origin/main or origin/master).
+Please generate a concise summary of all committed changes on the current branch compared to the base branch.
 
 **Important** Use a subagent to execute the task so that conversation history is not influencing the output. Have it save the report to .claude/diff-summaries with YYYY-MM-DD-HH-mm-<branch-name> filename format. Use bash to get the current datetime and branch name.
 
 <subagent>
 Your task is to:
-1. Determine the current branch: !`git branch --show-current`
-2. Find the merge base with main/master: !`git merge-base HEAD origin/main || git merge-base HEAD origin/master`
-3. View all commits on current branch since merge base: !`git log --oneline <merge-base>..HEAD`
-4. View the full diff of committed changes: !`git diff <merge-base>..HEAD`
-5. Analyze the changes and create a summary that includes:
+1. Determine the base branch name: !`git rev-parse --abbrev-ref --symbolic-full-name origin/HEAD`
+2. Determine the current branch: !`git branch --show-current`
+3. Find the merge base with the base branch: `git merge-base HEAD <base-branch>`
+4. View all commits on current branch since merge base: `git log --oneline <merge-base>..HEAD`
+5. View the full diff of committed changes: `git diff <merge-base>..HEAD`
+6. Analyze the changes and create a summary that includes:
    - Total number of commits on the branch
    - List of modified files with statistics (additions/deletions)
    - High-level summary of what was changed (features added, bugs fixed, refactoring done)

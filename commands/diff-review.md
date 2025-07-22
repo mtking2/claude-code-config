@@ -10,7 +10,7 @@ Please perform a code review of the current git working directory compared to th
 <subagent>
 Your task is to:
 1. View current stages and unstaged changes: !`git status`
-2. View all changes from the common ancestor to current working directory: !`git diff origin/main...HEAD`
+2. View all changes from the common ancestor to current working directory: !`git diff origin/master...HEAD`
 3. View staged changes: !`git diff --staged`
 4. View unstaged changes: !`git diff`
 5. Analyze all the code changes for:
